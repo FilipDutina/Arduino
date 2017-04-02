@@ -1,0 +1,111 @@
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+const unsigned char simboli[] = {
+		0x5, 0xdd, 0x46, 0x54, 0x9c, 0x34, 0x24, 0x5d, 0x04, 0x14
+}; //look-up tabela sa simbolima
+unsigned char DISP_BAFER[4] = {
+		0xff, 0xff, 0xff, 0xff
+}; //bafer displeja
+
+unsigned char ukljuceno = 0;
+unsigned char disp = 3;
+int brojac = 0;
+unsigned int trenutnoStanje = 0;
+unsigned long millis = 0;
+
+ISR(TIMER0_COMPA_vect)
+{
+	//prekid tajmera 0 usled dostizanja vrednosti registra OCR0A
+	if (++disp > 3)
+		disp = 0;
+	PORTB = ~(1 << (3-disp)); //ukljucenje tranzistora
+	PORTD = DISP_BAFER[disp]; //ispis na trenutno aktivan displej
+	millis++; //sistemsko vreme
+}
+
+ISR(PCINT1_vect)
+{
+	//prekid usled promene stanja pina PCINT10 ili pina PCINT8
+	switch ((~PINC) & 0xA)
+	{
+	case 0x02: //pritisnut donji taster
+	{
+		ukljuceno = 1;
+		trenutnoStanje = 1;
+		break;
+	}
+	case 0x08:	//pritisnut gornji taster
+	{
+		ukljuceno = 2;
+		trenutnoStanje = 1;
+		break;
+	}
+
+	}
+
+	if (ukljuceno == 2 && trenutnoStanje != 0)
+	{
+		brojac++;
+		//DISP_BAFER[3] = simboli[brojac];
+	}
+	else if(ukljuceno == 1 && trenutnoStanje != 0)
+	{
+		brojac--;
+		//DISP_BAFER[3] = simboli[brojac];
+	}
+	trenutnoStanje = 0;
+
+	//********************************************************
+	if(brojac >= 0 && brojac < 10)
+	{
+		DISP_BAFER[2] = 0xff;
+		DISP_BAFER[3] = simboli[brojac % 10];
+	}
+	if(brojac >= 10 && brojac < 100)
+	{
+		DISP_BAFER[2] = simboli[brojac / 10];
+		DISP_BAFER[3] = simboli[brojac % 10]
+								;
+	}
+	if(brojac < 0 && brojac > -10)
+	{
+		DISP_BAFER[2] = 0xfe;
+		DISP_BAFER[3] = simboli[abs(brojac) % 10];
+	}
+	if(brojac < -10 && brojac > -100)
+	{
+		DISP_BAFER[1] = 0xfe;
+		DISP_BAFER[3] = simboli[abs(brojac) % 10];
+		DISP_BAFER[2] = simboli[abs(brojac) / 10];
+	}
+}
+
+int main()
+{
+	DISP_BAFER[3] = simboli[0];
+	//inicijalizacija portova:
+	DDRB = 0x0f; //PB0 -> izlaz
+	DDRC = 0x00; //port C -> ulaz
+	DDRD = 0xff; //port D -> izlaz
+	//PORTB = ~0x01; //ukljucenje displeja D4
+	PCICR = (1 << PCIE1); //dozvola prekida usled promene stanja; isto sto i PCICR = 0x02;
+	PCMSK1 = 0xA; //pina PCINT10, ili pina PCINT8
+	//if (++disp > 3)
+	//	disp = 0;
+	//PORTB = ~(1 << (3-disp)); //ukljucenje tranzistora
+	//PORTD = DISP_BAFER[disp]; //ispis na trenutno aktivan displej
+	//inicijalizacija tajmera 0:
+	TCCR0A = 0x02; //tajmer 0: CTC mod
+	TCCR0B = 0x03; //tajmer 0: fclk = fosc/64
+	OCR0A = 249; //perioda tajmera 0: 250 Tclk (OCR0A + 1 = 250)
+	TIMSK0 = 0x02; //dozvola prekida tajmera 0
+	//usled dostizanja vrednosti registra OCR0A
+	sei(); //I = 1 (dozvola prekida)
+	while(1); //glavni program se vrti u praznoj petlji
+	//i ceka prekide
+	return 0;
+}
+
+
+maksimdavid@gmail.com

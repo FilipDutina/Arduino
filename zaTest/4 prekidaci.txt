@@ -1,0 +1,44 @@
+#include<avr/io.h>
+#include<util/delay.h>
+
+//makroi za kontrolu pinova preko kojih je kontroler povezan sa 74HC165:
+#define SCL_HI (PORTC |= (1<<5)) 
+#define SCL_LO (PORTC &= ~(1<<5)) 
+#define SDA (PINC & (1 << 4)) 
+#define SHLD_HI (PORTB |= (1<<5)) 
+#define SHLD_LO (PORTB &= ~(1<<5))
+
+unsigned char ocitaj_prekidace()
+{
+	unsigned chari, tmp = 0, mask = 0x80;
+
+	//impuls za upis stanja prekidaca u registar
+	SHLD_HI;
+	SHLD_LO;
+	SHLD_HI;
+
+	for(i = 0; i < 8; i++)
+	{
+		SCL_LO;
+		SCL_HI;	//generisanje aktivne ivice takta
+
+		if(SDA)	//provera stanja ulaznog pina
+			tmp |= mask;
+		mask >>= 1;
+	}
+	return tmp;
+}
+
+int main(void)
+{
+	DDRD = 0xff;	//port D -> ulaz
+	DDRC = 0x20;	//PC5 -> izlaz
+	DDRB = 0x30;	//PB5 i PB4 -> izlazi
+
+	PORTB = ~0x10;	//ukljucenje tranzistora Q0
+
+	while(1)	
+		PORTD = ocitaj_prekidace();
+
+	return 0;
+}

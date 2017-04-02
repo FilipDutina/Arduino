@@ -1,0 +1,67 @@
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+const unsigned char cifre[] = {
+		0xdd, 0x46, 0x54, 0x9c, 0x34, 0x24
+}; //cifre 1..6
+
+unsigned char kockica = 0, brojac = 0, ukljuceno = 1;
+
+ISR(TIMER0_COMPA_vect)
+{
+	//prekid tajmera 0 usled dostizanja vrednosti registra OCR0A
+	if (!ukljuceno)
+		brojac = 0;
+	if (++brojac == 40)
+	{
+		brojac = 0;
+		//promena stanja kockice desava se na svakih 40ms
+		if (++kockica == 7)
+			kockica = 1;
+		PORTD = cifre[kockica - 1];
+	}
+	if(ukljuceno == 2)
+	{
+		PORTD = cifre[5];
+	}
+}
+
+
+ISR(PCINT1_vect)
+{
+	//prekid usled promene stanja pina PCINT10 ili pina PCINT8
+	switch ((~PINC) & 0xD)
+	{
+	case 0x01: //pritisnut levi taster
+		ukljuceno = 1;
+		break;
+	case 0x04: //pritisnut desni taster
+		ukljuceno = 0;
+		break;
+	case 0x08:	//pritisnut gornji taster
+		ukljuceno = 2;
+		break;
+
+	}
+}
+
+int main()
+{
+	//inicijalizacija portova:
+	DDRB = 0x01; //PB0 -> izlaz
+	DDRC = 0x00; //port C -> ulaz
+	DDRD = 0xff; //port D -> izlaz
+	PORTB = ~0x01; //ukljucenje displeja D4
+	PCICR = (1 << PCIE1); //dozvola prekida usled promene stanja; isto sto i PCICR = 0x02;
+	PCMSK1 = 0xD; //pina PCINT10, ili pina PCINT8
+	//inicijalizacija tajmera 0:
+	TCCR0A = 0x02; //tajmer 0: CTC mod
+	TCCR0B = 0x03; //tajmer 0: fclk = fosc/64
+	OCR0A = 249; //perioda tajmera 0: 250 Tclk (OCR0A + 1 = 250)
+	TIMSK0 = 0x02; //dozvola prekida tajmera 0
+	//usled dostizanja vrednosti registra OCR0A
+	sei(); //I = 1 (dozvola prekida)
+	while(1); //glavni program se vrti u praznoj petlji
+	//i ceka prekide
+	return 0;
+}

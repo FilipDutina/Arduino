@@ -1,0 +1,76 @@
+#include<avr/io.h>
+#include<util/delay.h>
+
+int main(void)
+{
+	unsigned char tasteri;
+	DDRD = 0xff;	//port D -> izlaz (sve jedinice)
+	DDRC = 0x00;	//port C -> ulaz
+	DDRB |= 1 << 4;	//PB4 -> izlaz
+	PORTB &= ~(1 << 4);	//PB4 = 0, cime se ukljucuje tranzistor Q0
+	int flag;
+
+	while(1)
+	{
+		tasteri = PINC & 0x0f;	//ocitavanje stanja tastera
+		while(1)
+		{
+				PORTD = 0xF;
+				_delay_ms(250);
+				PORTD = 0x87;
+				_delay_ms(250);
+				PORTD = 0xC3;
+				_delay_ms(250);
+				PORTD = 0xE1;
+				_delay_ms(250);
+				PORTD = 0xF0;
+				_delay_ms(250);
+				PORTD = 0x78;
+				_delay_ms(250);
+				PORTD = 0x3C;
+				_delay_ms(250);
+				PORTD = 0x1E;
+				_delay_ms(250);
+				tasteri = PINC & 0x0f;
+				if(!(tasteri & 0x01))
+				{
+					flag++;
+				}
+				if(!(tasteri & 0x02))
+					break;
+				if(flag != 0)
+					break;
+		}
+		flag = 0;
+		while(1)
+		{
+				PORTD = 0x1E;
+				_delay_ms(250);
+				PORTD = 0x3C;
+				_delay_ms(250);
+				PORTD = 0x78;
+				_delay_ms(250);
+				PORTD = 0xF0;
+				_delay_ms(250);
+				PORTD = 0xE1;
+				_delay_ms(250);
+				PORTD = 0xC3;
+				_delay_ms(250);
+				PORTD = 0x87;
+				_delay_ms(250);
+				PORTD = 0xF;
+				_delay_ms(250);
+				tasteri = PINC & 0x0f;
+				if(!(tasteri & 0x04))
+				{
+					flag++;
+				}
+				if(!(tasteri & 0x02))
+					break;
+				if(flag != 0)
+					break;
+		}
+		flag = 0;
+
+		tasteri = PINC & 0x0f;
+		if(!(tasteri & 0x02))	//provera stanja tastera S1

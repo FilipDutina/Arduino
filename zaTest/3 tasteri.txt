@@ -1,0 +1,40 @@
+#include<avr/io.h>
+#include<util/delay.h>
+
+const unsigned char simboli[] = {0x0c, 0xa4, 0x27, 0xc4};
+
+void ispis_7SEG(unsigned char karakter, unsigned char pozicija)
+{
+	PORTB = ~(0x01 << (4 - pozicija));	//ukljucenje displeja na zeljenoj poziciji
+	PORTD = karakter; 	//prikaz karaktera
+	_delay_ms(2);	//pauza 2ms
+}
+
+int main(void)
+{
+	unsigned char tasteri;
+	DDRD = 0xff;	//port D -> izlaz
+	DDRC = 0x00;	//port C -> ulaz
+	DDRB = 0x0f;	//PB3 - PB0 izlazi
+	while(1)
+	{
+		tasteri = PINC & 0x0f;	//ocitavanje stanja tastera
+		if(!(tasteri & 0x01))	//provera stanja tastera S0
+			ispis_7SEG(simboli[0], 1);
+		else
+			ispis_7SEG(oxfe, 1);
+		if(!(tasteri & 0x02))	//provera stanja tastera S1
+			ispis_7SEG(simboli[1], 2);
+		else
+			ispis_7SEG(oxfe, 2);
+		if(!(tasteri & 0x04))	//provera stanja tastera S2
+			ispis_7SEG(simboli[2], 3);
+		else
+			ispis_7SEG(oxfe, 3);
+		if(!(tasteri & 0x08))	//provera stanja tastera S3
+			ispis_7SEG(simboli[3], 4)
+		else
+			ispis_7SEG(oxfe, 4);
+	}
+	return 0;
+}
